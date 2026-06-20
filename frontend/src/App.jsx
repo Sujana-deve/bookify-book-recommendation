@@ -1,16 +1,23 @@
-import { useEffect, useState } from "react"
-import axios from "axios"
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import Navbar from './components/Navbar';
+import BookList from './pages/BookList';
+import BookDetail from './pages/BookDetail';
+import Login from './pages/Login';
+import Register from './pages/Register';
 
-function App() {
-  const [status, setStatus] = useState("checking...")
-
-  useEffect(() => {
-    axios.get("http://localhost:8000/api/health/")
-      .then(res => setStatus(res.data.status))
-      .catch(() => setStatus("Connection failed"))
-  }, [])
-
-  return <div><h1>Backend says: {status}</h1></div>
+export default function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Navbar />
+        <Routes>
+          <Route path="/" element={<BookList />} />
+          <Route path="/books/:id" element={<BookDetail />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
+  );
 }
-
-export default App
