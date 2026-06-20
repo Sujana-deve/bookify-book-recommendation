@@ -5,9 +5,9 @@ import { useAuth } from '../context/AuthContext';
 export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, loading } = useAuth();
-  const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const { user, logout, loading, savedIds } = useAuth();
+  const [scrolled, setScrolled]     = useState(false);
+  const [menuOpen, setMenuOpen]     = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef(null);
 
@@ -57,6 +57,24 @@ export default function Navbar() {
               paddingBottom: 2,
             }}>Discover</Link>
 
+            {user && (
+              <Link to="/my-list" style={{
+                fontFamily: 'var(--font-body)', fontSize: '0.85rem', fontWeight: 600,
+                letterSpacing: '0.06em', textTransform: 'uppercase', textDecoration: 'none',
+                color: location.pathname === '/my-list' ? 'var(--terra)' : 'var(--ink-muted)',
+                borderBottom: location.pathname === '/my-list' ? '2px solid var(--terra)' : '2px solid transparent',
+                paddingBottom: 2, display: 'flex', alignItems: 'center', gap: '0.35rem',
+              }}>
+                🔖 My List
+                {savedIds.size > 0 && (
+                  <span style={{
+                    background: 'var(--terra)', color: 'white', borderRadius: 100,
+                    fontSize: '0.65rem', fontWeight: 700, padding: '1px 6px', lineHeight: 1.5,
+                  }}>{savedIds.size}</span>
+                )}
+              </Link>
+            )}
+
             {loading ? null : user ? (
               <div ref={profileRef} style={{ position: 'relative' }}>
                 <button onClick={() => setProfileOpen(v => !v)} style={{
@@ -81,6 +99,9 @@ export default function Navbar() {
                       <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.8rem', color: 'var(--ink-muted)' }}>Signed in as</p>
                       <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)' }}>{user.username}</p>
                     </div>
+                    <Link to="/my-list" style={{ display: 'block', padding: '0.6rem 0.8rem', borderRadius: 8, fontFamily: 'var(--font-body)', fontSize: '0.85rem', fontWeight: 600, color: 'var(--ink)', textDecoration: 'none' }}>
+                      🔖 My Reading List {savedIds.size > 0 && `(${savedIds.size})`}
+                    </Link>
                     <button onClick={handleLogout} style={{
                       width: '100%', textAlign: 'left', background: 'none', border: 'none',
                       padding: '0.6rem 0.8rem', borderRadius: 8, cursor: 'pointer',
@@ -115,11 +136,9 @@ export default function Navbar() {
         {menuOpen && (
           <div style={{ padding: '1rem 2rem 1.5rem', background: 'rgba(253,246,238,0.97)', borderTop: '1px solid var(--parchment)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <Link to="/" style={{ fontFamily: 'var(--font-body)', color: 'var(--ink)', textDecoration: 'none' }}>Discover</Link>
+            {user && <Link to="/my-list" style={{ fontFamily: 'var(--font-body)', color: 'var(--ink)', textDecoration: 'none' }}>🔖 My List {savedIds.size > 0 && `(${savedIds.size})`}</Link>}
             {loading ? null : user ? (
-              <>
-                <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.85rem', color: 'var(--ink-muted)' }}>Signed in as <strong>{user.username}</strong></span>
-                <button onClick={handleLogout} style={{ textAlign: 'left', background: 'none', border: 'none', padding: 0, fontFamily: 'var(--font-body)', fontSize: '0.95rem', fontWeight: 600, color: 'var(--rust)', cursor: 'pointer' }}>Sign Out</button>
-              </>
+              <button onClick={handleLogout} style={{ textAlign: 'left', background: 'none', border: 'none', padding: 0, fontFamily: 'var(--font-body)', fontSize: '0.95rem', fontWeight: 600, color: 'var(--rust)', cursor: 'pointer' }}>Sign Out</button>
             ) : (
               <Link to="/login" style={{ fontFamily: 'var(--font-body)', color: 'var(--terra)', fontWeight: 700, textDecoration: 'none' }}>Sign In</Link>
             )}

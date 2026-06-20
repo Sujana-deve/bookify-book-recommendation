@@ -1,14 +1,20 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const API = 'http://localhost:8000/api';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser]           = useState(null);
+  const [loading, setLoading]     = useState(true);
+  const [savedIds, setSavedIds]   = useState(new Set());
 
   const getAccessToken = () => localStorage.getItem('access');
   const getRefreshToken = () => localStorage.getItem('refresh');
+
+  const authHeaders = () => ({
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${getAccessToken()}`,
+  });
 
   const fetchMe = async (token) => {
     try {
@@ -18,6 +24,7 @@ export function AuthProvider({ children }) {
       if (!res.ok) throw new Error('Invalid token');
       const data = await res.json();
       setUser(data);
+      fetchSavedIds();
     } catch {
       localStorage.removeItem('access');
       localStorage.removeItem('refresh');
@@ -26,6 +33,19 @@ export function AuthProvider({ children }) {
       setLoading(false);
     }
   };
+
+  const fetchSavedIds = useCallback(async () => {
+    const token = getAccessToken();
+    if (!token) return;
+    try {
+      const res = await fetch(`${API}/auth/reading-list/ids/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const ids = await res.json();
+      setSavedIds(new Set(ids));
+    } catch { /* ignore */ }
+  }, []);
 
   useEffect(() => {
     const token = getAccessToken();
@@ -75,14 +95,42 @@ export function AuthProvider({ children }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh }),
       });
-    } catch { /* ignore network errors on logout */ }
+    } catch { /* ignore */ }
     localStorage.removeItem('access');
     localStorage.removeItem('refresh');
     setUser(null);
+    setSavedIds(new Set());
+  };
+
+  const saveBook = async (bookId) => {
+    const res = await fetch(`${API}/auth/save/${bookId}/`, {
+      method: 'POST', headers: authHeaders(),
+    });
+    if (res.ok) setSavedIds(prev => new Set([...prev, bookId]));
+    return res.ok;
+  };
+
+  const unsaveBook = async (bookId) => {
+    const res = await fetch(`${API}/auth/unsave/${bookId}/`, {
+      method: 'DELETE', headers: authHeaders(),
+    });
+    if (res.ok) setSavedIds(prev => { const s = new Set(prev); s.delete(bookId); return s; });
+    return res.ok;
+  };
+
+  const toggleSave = async (bookId) => {
+    if (!user) return false;
+    if (savedIds.has(bookId)) return unsaveBook(bookId);
+    return saveBook(bookId);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, getAccessToken }}>
+    <AuthContext.Provider value={{
+      user, loading, savedIds,
+      login, register, logout,
+      toggleSave, fetchSavedIds,
+      getAccessToken,
+    }}>
       {children}
     </AuthContext.Provider>
   );

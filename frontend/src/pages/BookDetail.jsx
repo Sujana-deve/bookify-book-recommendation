@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const API = 'http://localhost:8000/api';
 
 function Nocover({ title, authors }) {
-  const colors = [
-    ['#c4603a','#9e3d20'], ['#7a8c6e','#5a6b50'],
-    ['#9e7a4a','#7a5a2e'], ['#6a7a9e','#4a5a7e'],
-    ['#9e6a7a','#7e4a5a'],
+  const PALETTE = [
+    ['#b5604a','#8c3d28'], ['#7a8c6e','#4e6348'],
+    ['#9e7a4a','#6e5030'], ['#6a7a9e','#3e5078'],
+    ['#9e6a7a','#6e3e50'], ['#5a8c7a','#2e6050'],
   ];
-  const idx = (title?.charCodeAt(0) || 0) % colors.length;
-  const [from, to] = colors[idx];
+  const idx = (title?.charCodeAt(0) || 0) % PALETTE.length;
+  const [from, to] = PALETTE[idx];
   return (
     <div style={{
       width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
@@ -46,6 +47,36 @@ function MetaBadge({ label, value }) {
       <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-muted)', marginBottom: 3 }}>{label}</p>
       <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.9rem', fontWeight: 600, color: 'var(--ink)' }}>{value}</p>
     </div>
+  );
+}
+
+function BookmarkButton({ bookId }) {
+  const { user, savedIds, toggleSave } = useAuth();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const isSaved = savedIds.has(bookId);
+
+  const handleClick = async () => {
+    if (!user) { navigate('/login'); return; }
+    setLoading(true);
+    await toggleSave(bookId);
+    setLoading(false);
+  };
+
+  return (
+    <button onClick={handleClick} disabled={loading} style={{
+      display: 'flex', alignItems: 'center', gap: '0.5rem',
+      padding: '0.65rem 1.2rem', borderRadius: 10, border: '1.5px solid',
+      borderColor: isSaved ? 'var(--terra)' : 'var(--cream-dark)',
+      background: isSaved ? 'rgba(196,96,58,0.08)' : 'white',
+      color: isSaved ? 'var(--terra)' : 'var(--ink-muted)',
+      fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: 600,
+      cursor: loading ? 'not-allowed' : 'pointer',
+      transition: 'all 0.2s', width: '100%', justifyContent: 'center',
+    }}>
+      <span style={{ fontSize: '1.1rem' }}>{isSaved ? '🔖' : '🏷️'}</span>
+      {loading ? 'Saving…' : isSaved ? 'Saved to My List' : 'Save to My List'}
+    </button>
   );
 }
 
@@ -100,12 +131,7 @@ export default function BookDetail() {
         {book.thumbnail && (
           <div style={{ position: 'absolute', inset: -40, backgroundImage: `url(${book.thumbnail})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(28px) saturate(0.7) brightness(0.6)' }}/>
         )}
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: book.thumbnail
-            ? 'linear-gradient(to bottom, rgba(253,246,238,0) 0%, rgba(253,246,238,0.4) 60%, var(--cream) 100%)'
-            : 'linear-gradient(135deg, var(--cream-dark), var(--parchment))',
-        }}/>
+        <div style={{ position: 'absolute', inset: 0, background: book.thumbnail ? 'linear-gradient(to bottom, rgba(253,246,238,0) 0%, rgba(253,246,238,0.4) 60%, var(--cream) 100%)' : 'linear-gradient(135deg, var(--cream-dark), var(--parchment))' }}/>
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 1000, margin: '0 auto', padding: '5rem 2rem 0' }}>
           <Link to="/" style={{
             display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
@@ -131,6 +157,9 @@ export default function BookDetail() {
             </div>
 
             <div style={{ marginTop: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              {/* Bookmark button */}
+              <BookmarkButton bookId={book.id} />
+
               {openLibraryUrl && (
                 <a href={openLibraryUrl} target="_blank" rel="noopener noreferrer" style={{
                   display: 'block', textAlign: 'center', padding: '0.65rem',
@@ -153,33 +182,24 @@ export default function BookDetail() {
                 <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--terra)' }}>{book.categories}</span>
               </div>
             )}
-
             <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.6rem, 3.5vw, 2.4rem)', fontWeight: 700, color: 'var(--ink)', lineHeight: 1.15, marginBottom: '0.4rem' }}>{book.title}</h1>
-
             {book.subtitle && <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontStyle: 'italic', color: 'var(--ink-mid)', marginBottom: '0.6rem' }}>{book.subtitle}</p>}
-
             <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.95rem', color: 'var(--ink-muted)', marginBottom: '1rem' }}>
               by <strong style={{ color: 'var(--ink-mid)' }}>{book.authors}</strong>
             </p>
-
             {book.average_rating > 0 && (
               <div style={{ marginBottom: '1.2rem' }}>
                 <StarRating rating={book.average_rating} />
-                {book.ratings_count > 0 && (
-                  <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.78rem', color: 'var(--ink-muted)', marginTop: 4 }}>{book.ratings_count.toLocaleString()} ratings</p>
-                )}
+                {book.ratings_count > 0 && <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.78rem', color: 'var(--ink-muted)', marginTop: 4 }}>{book.ratings_count.toLocaleString()} ratings</p>}
               </div>
             )}
-
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', marginBottom: '1.8rem' }}>
               <MetaBadge label="Published" value={book.published_year} />
               <MetaBadge label="Pages" value={book.num_pages} />
               <MetaBadge label="ISBN-13" value={book.isbn13} />
               <MetaBadge label="ISBN-10" value={book.isbn10} />
             </div>
-
             <div style={{ height: 1, background: 'var(--cream-dark)', marginBottom: '1.5rem' }}/>
-
             {book.description && (
               <div>
                 <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.8rem' }}>About this book</h2>

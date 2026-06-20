@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import UserProfile
+from .models import UserProfile, ReadingList
+from books.serializers import BookSerializer
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -36,3 +37,11 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id', 'username', 'email')
+
+
+class ReadingListSerializer(serializers.ModelSerializer):
+    book = BookSerializer(read_only=True)
+
+    class Meta:
+        model = ReadingList
+        fields = ('id', 'book', 'saved_at')

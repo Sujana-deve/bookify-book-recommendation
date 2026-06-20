@@ -5,6 +5,7 @@ import BookList from './pages/BookList';
 import BookDetail from './pages/BookDetail';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import MyList from './pages/MyList';
 
 export default function App() {
   return (
@@ -12,10 +13,11 @@ export default function App() {
       <BrowserRouter>
         <Navbar />
         <Routes>
-          <Route path="/" element={<BookList />} />
-          <Route path="/books/:id" element={<BookDetail />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/"           element={<BookList />} />
+          <Route path="/books/:id"  element={<BookDetail />} />
+          <Route path="/login"      element={<Login />} />
+          <Route path="/register"   element={<Register />} />
+          <Route path="/my-list"    element={<MyList />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
