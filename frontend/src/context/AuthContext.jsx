@@ -43,7 +43,7 @@ export function AuthProvider({ children }) {
       });
       if (!res.ok) return;
       const ids = await res.json();
-      setSavedIds(new Set(ids));
+      setSavedIds(new Set(ids.map(Number)));
     } catch { /* ignore */ }
   }, []);
 
@@ -106,7 +106,7 @@ export function AuthProvider({ children }) {
     const res = await fetch(`${API}/auth/save/${bookId}/`, {
       method: 'POST', headers: authHeaders(),
     });
-    if (res.ok) setSavedIds(prev => new Set([...prev, bookId]));
+    if (res.ok) setSavedIds(prev => new Set([...prev, Number(bookId)]));
     return res.ok;
   };
 
@@ -114,13 +114,13 @@ export function AuthProvider({ children }) {
     const res = await fetch(`${API}/auth/unsave/${bookId}/`, {
       method: 'DELETE', headers: authHeaders(),
     });
-    if (res.ok) setSavedIds(prev => { const s = new Set(prev); s.delete(bookId); return s; });
+    if (res.ok) setSavedIds(prev => { const s = new Set(prev); s.delete(Number(bookId)); return s; });
     return res.ok;
   };
 
   const toggleSave = async (bookId) => {
     if (!user) return false;
-    if (savedIds.has(bookId)) return unsaveBook(bookId);
+    if (savedIds.has(Number(bookId))) return unsaveBook(bookId);
     return saveBook(bookId);
   };
 

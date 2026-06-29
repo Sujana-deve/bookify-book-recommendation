@@ -54,7 +54,7 @@ function BookmarkButton({ bookId }) {
   const { user, savedIds, toggleSave } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const isSaved = savedIds.has(bookId);
+  const isSaved = savedIds.has(Number(bookId));
 
   const handleClick = async () => {
     if (!user) { navigate('/login'); return; }
@@ -157,7 +157,6 @@ export default function BookDetail() {
             </div>
 
             <div style={{ marginTop: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              {/* Bookmark button */}
               <BookmarkButton bookId={book.id} />
 
               {openLibraryUrl && (
