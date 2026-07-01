@@ -219,3 +219,4 @@ export default function BookDetail() {
     </div>
   );
 }
+//the detail page for the book, it shows the book cover, title, author, rating, description and other meta data. It also has a button to save the book to the user's list and a link to view the book on Open Library.
