@@ -20,9 +20,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework',
-    'corsheaders',
-    'books',
+    'rest_framework', #this is the django rests framework that allows us to build apis
+    'corsheaders', #it is a middleware that allows cross-origin requests from the frontend to the backend 
+    'books.apps.BooksConfig', #changed this for the recommender engine to load on startup
     'users',  # new auth app
 ]
 
