@@ -21,3 +21,17 @@ class BookListView(generics.ListAPIView):
 class BookDetailView(generics.RetrieveAPIView):
     serializer_class = BookSerializer
     queryset = Book.objects.all()
+
+from books.recommender import get_recommendations
+
+@api_view(['GET'])
+def recommendations(request, book_id):
+    rec_ids = get_recommendations(book_id, n=10)
+    if not rec_ids:
+        return Response([])
+    books = Book.objects.filter(id__in=rec_ids)
+    # preserve similarity order
+    books_dict = {b.id: b for b in books}
+    ordered = [books_dict[i] for i in rec_ids if i in books_dict]
+    serializer = BookSerializer(ordered, many=True)
+    return Response(serializer.data)

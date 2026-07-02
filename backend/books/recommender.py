@@ -1,8 +1,7 @@
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 
-_cosine_sim = None
+_tfidf_matrix = None
 _book_ids = []
 _id_to_index = {}
 
@@ -17,10 +16,11 @@ def _build_combined_text(book):
 
 def build_engine():
     """
-    Load all books from DB, build TF-IDF matrix, compute cosine similarity.
-    Called once on Django startup. Stored in module-level globals.
+    Load all books from DB, build TF-IDF matrix.
+    Similarity is computed on demand per request, not precomputed.
+    Called once on Django startup.
     """
-    global _cosine_sim, _book_ids, _id_to_index
+    global _tfidf_matrix, _book_ids, _id_to_index
 
     from books.models import Book
 
@@ -40,28 +40,27 @@ def build_engine():
         ngram_range=(1, 2),
         min_df=2,
     )
-    tfidf_matrix = vectorizer.fit_transform(corpus)
-    print(f"[Recommender] TF-IDF matrix shape: {tfidf_matrix.shape}")
-
-    print("[Recommender] Computing cosine similarity...")
-    _cosine_sim = cosine_similarity(tfidf_matrix, tfidf_matrix, dense_output=False)
+    _tfidf_matrix = vectorizer.fit_transform(corpus)
+    print(f"[Recommender] TF-IDF matrix shape: {_tfidf_matrix.shape}")
     print("[Recommender] Engine ready.")
 
 
 def get_recommendations(book_id, n=10):
     """
-    Return list of up to n book IDs most similar to book_id.
-    Excludes the book itself.
+    Compute similarity for one book against all others on demand.
+    Returns list of up to n similar book IDs.
     """
-    if _cosine_sim is None:
+    if _tfidf_matrix is None:
         return []
 
     idx = _id_to_index.get(book_id)
     if idx is None:
         return []
 
-    sim_row = _cosine_sim[idx].toarray().flatten()
-    sim_row[idx] = 0  # exclude self
+    # Get the single row for this book and compute similarity against all
+    book_vector = _tfidf_matrix[idx]
+    sim_scores = (_tfidf_matrix @ book_vector.T).toarray().flatten()
+    sim_scores[idx] = 0  # exclude self
 
-    top_indices = np.argsort(sim_row)[::-1][:n]
-    return [_book_ids[i] for i in top_indices if sim_row[i] > 0]
+    top_indices = np.argsort(sim_scores)[::-1][:n]
+    return [_book_ids[i] for i in top_indices if sim_scores[i] > 0]

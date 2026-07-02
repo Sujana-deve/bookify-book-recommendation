@@ -4,12 +4,13 @@ import { useAuth } from '../context/AuthContext';
 
 const API = 'http://localhost:8000/api';
 
+const PALETTE = [
+  ['#b5604a','#8c3d28'], ['#7a8c6e','#4e6348'],
+  ['#9e7a4a','#6e5030'], ['#6a7a9e','#3e5078'],
+  ['#9e6a7a','#6e3e50'], ['#5a8c7a','#2e6050'],
+];
+
 function Nocover({ title, authors }) {
-  const PALETTE = [
-    ['#b5604a','#8c3d28'], ['#7a8c6e','#4e6348'],
-    ['#9e7a4a','#6e5030'], ['#6a7a9e','#3e5078'],
-    ['#9e6a7a','#6e3e50'], ['#5a8c7a','#2e6050'],
-  ];
   const idx = (title?.charCodeAt(0) || 0) % PALETTE.length;
   const [from, to] = PALETTE[idx];
   return (
@@ -80,6 +81,57 @@ function BookmarkButton({ bookId }) {
   );
 }
 
+function Recommendations({ bookId }) {
+  const [recs, setRecs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`${API}/books/${bookId}/recommendations/`)
+      .then(r => r.json())
+      .then(data => { setRecs(data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [bookId]);
+
+  if (loading) return (
+    <div style={{ maxWidth: 1000, margin: '0 auto 3rem', padding: '0 2rem' }}>
+      <div style={{ height: 24, width: 200, borderRadius: 4, marginBottom: '1.2rem', background: 'linear-gradient(90deg, var(--cream-dark) 25%, var(--parchment) 50%, var(--cream-dark) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s ease-in-out infinite' }} />
+      <div style={{ display: 'flex', gap: '1rem' }}>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} style={{ flexShrink: 0, width: 120, height: 175, borderRadius: 6, background: 'linear-gradient(90deg, var(--cream-dark) 25%, var(--parchment) 50%, var(--cream-dark) 75%)', backgroundSize: '200% 100%', animation: `shimmer 1.4s ${i * 0.07}s ease-in-out infinite` }} />
+        ))}
+      </div>
+    </div>
+  );
+
+  if (recs.length === 0) return null;
+
+  return (
+    <div style={{ maxWidth: 1000, margin: '0 auto 4rem', padding: '0 2rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.2rem' }}>
+        <span style={{ display: 'block', width: 4, height: 22, background: 'var(--terra)', borderRadius: 2, flexShrink: 0 }} />
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>You might also like</h2>
+      </div>
+      <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.75rem', scrollbarWidth: 'none' }}>
+        {recs.map(book => (
+          <Link key={book.id} to={`/books/${book.id}`} style={{ textDecoration: 'none', flexShrink: 0 }}>
+            <div style={{ width: 120, transition: 'transform 0.2s', }}>
+              <div style={{ width: 120, height: 175, borderRadius: 6, overflow: 'hidden', background: 'var(--parchment)', boxShadow: '3px 5px 14px rgba(44,26,14,0.16)' }}>
+                {book.thumbnail
+                  ? <img src={book.thumbnail} alt={book.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
+                  : <Nocover title={book.title} authors={book.authors} />
+                }
+              </div>
+              <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.74rem', fontWeight: 600, color: 'var(--ink)', marginTop: '0.45rem', lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{book.title}</p>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.65rem', color: 'var(--ink-muted)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{book.authors}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function BookDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -89,6 +141,7 @@ export default function BookDetail() {
 
   useEffect(() => {
     setLoading(true);
+    setBook(null);
     fetch(`${API}/books/${id}/`)
       .then(r => {
         if (r.status === 404) throw new Error('Book not found');
@@ -102,10 +155,10 @@ export default function BookDetail() {
   if (loading) return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)', paddingTop: 88, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ maxWidth: 900, width: '100%', padding: '2rem', display: 'grid', gridTemplateColumns: '220px 1fr', gap: '3rem' }}>
-        <div style={{ height: 320, borderRadius: 10, background: 'linear-gradient(90deg, var(--cream-dark) 25%, var(--parchment) 50%, var(--cream-dark) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s ease-in-out infinite' }}/>
+        <div style={{ height: 320, borderRadius: 10, background: 'linear-gradient(90deg, var(--cream-dark) 25%, var(--parchment) 50%, var(--cream-dark) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s ease-in-out infinite' }} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingTop: '1rem' }}>
-          {[{h:40,w:'70%'},{h:20,w:'45%'},{h:20,w:'55%'},{h:100,w:'100%'}].map((line, j) => (
-            <div key={j} style={{ height: line.h, width: line.w, borderRadius: 4, background: 'linear-gradient(90deg, var(--cream-dark) 25%, var(--parchment) 50%, var(--cream-dark) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s ease-in-out infinite' }}/>
+          {[{ h: 40, w: '70%' }, { h: 20, w: '45%' }, { h: 20, w: '55%' }, { h: 100, w: '100%' }].map((line, j) => (
+            <div key={j} style={{ height: line.h, width: line.w, borderRadius: 4, background: 'linear-gradient(90deg, var(--cream-dark) 25%, var(--parchment) 50%, var(--cream-dark) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s ease-in-out infinite' }} />
           ))}
         </div>
       </div>
@@ -127,11 +180,13 @@ export default function BookDetail() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
+
+      {/* Blurred banner */}
       <div style={{ position: 'relative', height: 280, overflow: 'hidden' }}>
         {book.thumbnail && (
-          <div style={{ position: 'absolute', inset: -40, backgroundImage: `url(${book.thumbnail})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(28px) saturate(0.7) brightness(0.6)' }}/>
+          <div style={{ position: 'absolute', inset: -40, backgroundImage: `url(${book.thumbnail})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(28px) saturate(0.7) brightness(0.6)' }} />
         )}
-        <div style={{ position: 'absolute', inset: 0, background: book.thumbnail ? 'linear-gradient(to bottom, rgba(253,246,238,0) 0%, rgba(253,246,238,0.4) 60%, var(--cream) 100%)' : 'linear-gradient(135deg, var(--cream-dark), var(--parchment))' }}/>
+        <div style={{ position: 'absolute', inset: 0, background: book.thumbnail ? 'linear-gradient(to bottom, rgba(253,246,238,0) 0%, rgba(253,246,238,0.4) 60%, var(--cream) 100%)' : 'linear-gradient(135deg, var(--cream-dark), var(--parchment))' }} />
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 1000, margin: '0 auto', padding: '5rem 2rem 0' }}>
           <Link to="/" style={{
             display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
@@ -145,20 +200,20 @@ export default function BookDetail() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 1000, margin: '-80px auto 0', padding: '0 2rem 5rem', position: 'relative', zIndex: 1 }}>
+      {/* Main card */}
+      <div style={{ maxWidth: 1000, margin: '-80px auto 0', padding: '0 2rem 2rem', position: 'relative', zIndex: 1 }}>
         <div style={{ background: 'white', borderRadius: 20, boxShadow: '0 8px 48px rgba(44,26,14,0.1)', padding: '2.5rem', display: 'grid', gridTemplateColumns: '200px 1fr', gap: '2.5rem' }} className="detail-grid">
 
+          {/* Left column */}
           <div>
             <div style={{ width: 200, height: 290, borderRadius: 10, overflow: 'hidden', boxShadow: 'var(--shadow-book)', background: 'var(--parchment)' }}>
               {book.thumbnail
-                ? <img src={book.thumbnail} alt={book.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+                ? <img src={book.thumbnail} alt={book.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 : <Nocover title={book.title} authors={book.authors} />
               }
             </div>
-
             <div style={{ marginTop: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               <BookmarkButton bookId={book.id} />
-
               {openLibraryUrl && (
                 <a href={openLibraryUrl} target="_blank" rel="noopener noreferrer" style={{
                   display: 'block', textAlign: 'center', padding: '0.65rem',
@@ -175,6 +230,7 @@ export default function BookDetail() {
             </div>
           </div>
 
+          {/* Right column */}
           <div>
             {book.categories && (
               <div style={{ display: 'inline-block', background: 'rgba(196,96,58,0.1)', borderRadius: 100, padding: '0.3rem 0.9rem', marginBottom: '0.8rem' }}>
@@ -198,7 +254,7 @@ export default function BookDetail() {
               <MetaBadge label="ISBN-13" value={book.isbn13} />
               <MetaBadge label="ISBN-10" value={book.isbn10} />
             </div>
-            <div style={{ height: 1, background: 'var(--cream-dark)', marginBottom: '1.5rem' }}/>
+            <div style={{ height: 1, background: 'var(--cream-dark)', marginBottom: '1.5rem' }} />
             {book.description && (
               <div>
                 <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.8rem' }}>About this book</h2>
@@ -208,6 +264,9 @@ export default function BookDetail() {
           </div>
         </div>
       </div>
+
+      {/* Recommendations */}
+      <Recommendations bookId={id} />
 
       <style>{`
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
@@ -219,4 +278,3 @@ export default function BookDetail() {
     </div>
   );
 }
-//the detail page for the book, it shows the book cover, title, author, rating, description and other meta data. It also has a button to save the book to the user's list and a link to view the book on Open Library.
