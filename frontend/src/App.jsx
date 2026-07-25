@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import BookList from './pages/BookList';
 import BookDetail from './pages/BookDetail';
+import BookReader from './pages/BookReader';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import MyList from './pages/MyList';
@@ -13,11 +14,12 @@ export default function App() {
       <BrowserRouter>
         <Navbar />
         <Routes>
-          <Route path="/"           element={<BookList />} />
-          <Route path="/books/:id"  element={<BookDetail />} />
-          <Route path="/login"      element={<Login />} />
-          <Route path="/register"   element={<Register />} />
-          <Route path="/my-list"    element={<MyList />} />
+          <Route path="/"             element={<BookList />} />
+          <Route path="/books/:id"    element={<BookDetail />} />
+          <Route path="/books/:id/read" element={<BookReader />} />
+          <Route path="/login"        element={<Login />} />
+          <Route path="/register"     element={<Register />} />
+          <Route path="/my-list"      element={<MyList />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

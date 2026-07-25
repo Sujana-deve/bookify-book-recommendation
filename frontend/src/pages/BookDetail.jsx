@@ -222,11 +222,14 @@ export default function BookDetail() {
                   textDecoration: 'none',
                 }}>View on Open Library ↗</a>
               )}
-              <button disabled style={{
-                padding: '0.65rem', background: 'var(--cream-dark)', color: 'var(--ink-muted)',
-                border: 'none', borderRadius: 10, fontFamily: 'var(--font-body)',
-                fontSize: '0.82rem', fontWeight: 600, cursor: 'not-allowed', opacity: 0.6,
-              }}>Read Free (Coming Soon)</button>
+              {book.gutenberg_id && (
+                <Link to={`/books/${book.id}/read`} style={{
+                  display: 'block', textAlign: 'center', padding: '0.65rem',
+                  background: 'var(--ink)', color: 'white', borderRadius: 10,
+                  fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: 600,
+                  textDecoration: 'none',
+                }}>Read Free ↗</Link>
+              )}
             </div>
           </div>
 
