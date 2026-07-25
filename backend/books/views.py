@@ -1,8 +1,34 @@
 from rest_framework import generics
 from rest_framework.decorators import api_view
+from rest_framework.views import APIView
+from rest_framework import status
 from rest_framework.response import Response
 from .models import Book
 from .serializers import BookSerializer
+import requests
+
+GUTENBERG_START = "*** START OF THE PROJECT GUTENBERG EBOOK"
+GUTENBERG_END = "*** END OF THE PROJECT GUTENBERG EBOOK"
+
+class BookReaderView(APIView):
+    def get(self, request, pk):
+        book = Book.objects.filter(pk=pk).first()
+        if not book or not book.gutenberg_id:
+            return Response({"error": "No readable text for this book."}, status=status.HTTP_404_NOT_FOUND)
+
+        url = f"https://www.gutenberg.org/cache/epub/{book.gutenberg_id}/pg{book.gutenberg_id}.txt"
+        resp = requests.get(url, timeout=10)
+        if resp.status_code != 200:
+            return Response({"error": "Could not fetch book text."}, status=status.HTTP_502_BAD_GATEWAY)
+
+        text = resp.text
+        start = text.find(GUTENBERG_START)
+        end = text.find(GUTENBERG_END)
+        if start != -1:
+            start = text.find("\n", start) + 1
+            text = text[start:end if end != -1 else None]
+
+        return Response({"title": book.title, "text": text.strip()})
 
 @api_view(['GET'])
 def health_check(request):
