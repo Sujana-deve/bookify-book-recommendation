@@ -61,3 +61,40 @@ def recommendations(request, book_id):
     ordered = [books_dict[i] for i in rec_ids if i in books_dict]
     serializer = BookSerializer(ordered, many=True)
     return Response(serializer.data)
+
+
+from .models import Book
+from .serializers import BookSerializer
+from books.collaborative import get_item_based_recommendations, get_user_based_recommendations
+
+
+@api_view(['GET'])
+def item_based_recommendations(request, book_id):
+    """
+    'Books saved by the same people who saved this book.'
+    Returns [] if this book has zero saves — no CF signal yet.
+    """
+    rec_ids = get_item_based_recommendations(book_id, n=10)
+    if not rec_ids:
+        return Response([])
+    books = Book.objects.filter(id__in=rec_ids)
+    books_dict = {b.id: b for b in books}
+    ordered = [books_dict[i] for i in rec_ids if i in books_dict]
+    serializer = BookSerializer(ordered, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+def user_based_recommendations(request, user_id):
+    """
+    'What similar-taste users saved, that this user hasn't saved yet.'
+    Returns [] if user has zero saves — no CF signal yet.
+    """
+    rec_ids = get_user_based_recommendations(user_id, n=10)
+    if not rec_ids:
+        return Response([])
+    books = Book.objects.filter(id__in=rec_ids)
+    books_dict = {b.id: b for b in books}
+    ordered = [books_dict[i] for i in rec_ids if i in books_dict]
+    serializer = BookSerializer(ordered, many=True)
+    return Response(serializer.data)

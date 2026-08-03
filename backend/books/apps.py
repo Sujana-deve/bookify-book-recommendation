@@ -7,4 +7,6 @@ class BooksConfig(AppConfig):
 
     def ready(self):
         from books.recommender import build_engine
+        from books.collaborative import build_cf_engine
         build_engine()
+        build_cf_engine()
