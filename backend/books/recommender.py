@@ -64,3 +64,26 @@ def get_recommendations(book_id, n=10):
 
     top_indices = np.argsort(sim_scores)[::-1][:n]
     return [_book_ids[i] for i in top_indices if sim_scores[i] > 0]
+
+"""
+ADD THIS FUNCTION to your existing books/recommender.py (append at the bottom).
+Don't replace the file — just add this one function alongside get_recommendations().
+"""
+
+def get_content_scores(book_id):
+    """
+    Returns (book_ids_list, raw_similarity_scores_array) for ALL books,
+    unfiltered — used by hybrid.py to blend with CF scores.
+    Same computation as get_recommendations(), just no top-n cut and no >0 filter.
+    """
+    if _tfidf_matrix is None:
+        return [], None
+
+    idx = _id_to_index.get(book_id)
+    if idx is None:
+        return [], None
+
+    book_vector = _tfidf_matrix[idx]
+    sim_scores = (_tfidf_matrix @ book_vector.T).toarray().flatten()
+    sim_scores[idx] = 0
+    return _book_ids, sim_scores
