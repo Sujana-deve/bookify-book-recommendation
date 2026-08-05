@@ -5,10 +5,14 @@ from rest_framework import status
 from rest_framework.response import Response
 from .models import Book
 from .serializers import BookSerializer
+from books.recommender import get_recommendations
+from books.collaborative import get_item_based_recommendations, get_user_based_recommendations
+from books.hybrid import get_hybrid_recommendations
 import requests
 
 GUTENBERG_START = "*** START OF THE PROJECT GUTENBERG EBOOK"
 GUTENBERG_END = "*** END OF THE PROJECT GUTENBERG EBOOK"
+
 
 class BookReaderView(APIView):
     def get(self, request, pk):
@@ -30,13 +34,15 @@ class BookReaderView(APIView):
 
         return Response({"title": book.title, "text": text.strip()})
 
+
 @api_view(['GET'])
 def health_check(request):
     return Response({"status": "Django is connected"})
 
+
 class BookListView(generics.ListAPIView):
     serializer_class = BookSerializer
-    
+
     def get_queryset(self):
         queryset = Book.objects.all()
         search = self.request.query_params.get('search', None)
@@ -44,28 +50,27 @@ class BookListView(generics.ListAPIView):
             queryset = queryset.filter(title__icontains=search)
         return queryset
 
+
 class BookDetailView(generics.RetrieveAPIView):
     serializer_class = BookSerializer
     queryset = Book.objects.all()
 
-from books.recommender import get_recommendations
+
+def _serialize_ordered(rec_ids):
+    """Shared helper: fetch books by id, preserve similarity order, serialize."""
+    if not rec_ids:
+        return []
+    books = Book.objects.filter(id__in=rec_ids)
+    books_dict = {b.id: b for b in books}
+    ordered = [books_dict[i] for i in rec_ids if i in books_dict]
+    return BookSerializer(ordered, many=True).data
+
 
 @api_view(['GET'])
 def recommendations(request, book_id):
+    """Content-based (TF-IDF) recommendations."""
     rec_ids = get_recommendations(book_id, n=10)
-    if not rec_ids:
-        return Response([])
-    books = Book.objects.filter(id__in=rec_ids)
-    # preserve similarity order
-    books_dict = {b.id: b for b in books}
-    ordered = [books_dict[i] for i in rec_ids if i in books_dict]
-    serializer = BookSerializer(ordered, many=True)
-    return Response(serializer.data)
-
-
-from .models import Book
-from .serializers import BookSerializer
-from books.collaborative import get_item_based_recommendations, get_user_based_recommendations
+    return Response(_serialize_ordered(rec_ids))
 
 
 @api_view(['GET'])
@@ -75,13 +80,7 @@ def item_based_recommendations(request, book_id):
     Returns [] if this book has zero saves — no CF signal yet.
     """
     rec_ids = get_item_based_recommendations(book_id, n=10)
-    if not rec_ids:
-        return Response([])
-    books = Book.objects.filter(id__in=rec_ids)
-    books_dict = {b.id: b for b in books}
-    ordered = [books_dict[i] for i in rec_ids if i in books_dict]
-    serializer = BookSerializer(ordered, many=True)
-    return Response(serializer.data)
+    return Response(_serialize_ordered(rec_ids))
 
 
 @api_view(['GET'])
@@ -91,10 +90,16 @@ def user_based_recommendations(request, user_id):
     Returns [] if user has zero saves — no CF signal yet.
     """
     rec_ids = get_user_based_recommendations(user_id, n=10)
-    if not rec_ids:
-        return Response([])
-    books = Book.objects.filter(id__in=rec_ids)
-    books_dict = {b.id: b for b in books}
-    ordered = [books_dict[i] for i in rec_ids if i in books_dict]
-    serializer = BookSerializer(ordered, many=True)
-    return Response(serializer.data)
+    return Response(_serialize_ordered(rec_ids))
+
+
+@api_view(['GET'])
+def hybrid_recommendations(request, book_id):
+    """
+    Blended content + CF recommendations.
+    ?alpha=0.5 optional query param (0 = pure content, 1 = pure CF, default 0.5).
+    Falls back to pure content-based automatically if the book has no CF signal.
+    """
+    alpha = float(request.query_params.get('alpha', 0.5))
+    rec_ids = get_hybrid_recommendations(book_id, n=10, alpha=alpha)
+    return Response(_serialize_ordered(rec_ids))
