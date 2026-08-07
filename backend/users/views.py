@@ -82,3 +82,20 @@ def saved_book_ids(request):
     """Return just the book IDs saved by the user — used by frontend to show bookmark state."""
     ids = ReadingList.objects.filter(user=request.user).values_list('book_id', flat=True)
     return Response(list(ids))
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def rate_book(request, book_id):
+    """Set/update 1-5 rating on a book already in the reading list."""
+    try:
+        rating = int(request.data.get('rating'))
+    except (TypeError, ValueError):
+        return Response({'error': 'rating must be an integer 1-5.'}, status=status.HTTP_400_BAD_REQUEST)
+    if not 1 <= rating <= 5:
+        return Response({'error': 'rating must be 1-5.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    updated = ReadingList.objects.filter(user=request.user, book_id=book_id).update(rating=rating)
+    if not updated:
+        return Response({'error': 'Save the book before rating it.'}, status=status.HTTP_404_NOT_FOUND)
+    return Response({'message': 'Rating saved.', 'rating': rating})

@@ -17,6 +17,7 @@ class ReadingList(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reading_list')
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='saved_by')
     saved_at = models.DateTimeField(auto_now_add=True)
+    rating = models.PositiveSmallIntegerField(null=True, blank=True)  # 1-5, set after reading
 
     class Meta:
         unique_together = ('user', 'book')  # can't save the same book twice

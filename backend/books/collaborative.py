@@ -2,9 +2,10 @@
 Collaborative filtering engine — item-based and user-based.
 Place at: backend/books/collaborative.py
 
-Built on ReadingList saves (binary implicit feedback), same architectural
-pattern as recommender.py: build matrix once at startup, compute similarity
-per-request against a single row (not full pairwise), to avoid O(n^2) memory.
+Built on ReadingList saves (binary implicit feedback, or 1-5 rating if rated),
+same architectural pattern as recommender.py: build matrix once at startup,
+compute similarity per-request against a single row (not full pairwise),
+to avoid O(n^2) memory.
 """
 import numpy as np
 from scipy.sparse import csr_matrix
@@ -20,6 +21,7 @@ _book_id_to_index = {}
 def build_cf_engine():
     """
     Load all ReadingList saves, build a sparse user-item matrix.
+    Cell value = rating if the user rated the book, else 1 for a plain save.
     Called once on Django startup, same as build_engine() in recommender.py.
     """
     global _user_item_matrix, _item_user_matrix, _user_ids, _book_ids
@@ -28,24 +30,24 @@ def build_cf_engine():
     from users.models import ReadingList
 
     print("[CF] Loading reading-list saves...")
-    saves = list(ReadingList.objects.values_list('user_id', 'book_id'))
+    saves = list(ReadingList.objects.values_list('user_id', 'book_id', 'rating'))
     print(f"[CF] {len(saves)} saves loaded.")
 
     if not saves:
         print("[CF] No saves found — CF engine disabled, will fall back to content-based only.")
         return
 
-    unique_user_ids = sorted({u for u, b in saves})
-    unique_book_ids = sorted({b for u, b in saves})
+    unique_user_ids = sorted({u for u, b, r in saves})
+    unique_book_ids = sorted({b for u, b, r in saves})
 
     _user_ids = unique_user_ids
     _book_ids = unique_book_ids
     _user_id_to_index = {uid: i for i, uid in enumerate(unique_user_ids)}
     _book_id_to_index = {bid: i for i, bid in enumerate(unique_book_ids)}
 
-    rows = [_user_id_to_index[u] for u, b in saves]
-    cols = [_book_id_to_index[b] for u, b in saves]
-    data = [1] * len(saves)
+    rows = [_user_id_to_index[u] for u, b, r in saves]
+    cols = [_book_id_to_index[b] for u, b, r in saves]
+    data = [r if r else 1 for u, b, r in saves]  # rating if rated, else 1 for plain save
 
     _user_item_matrix = csr_matrix(
         (data, (rows, cols)),
@@ -114,10 +116,6 @@ def get_user_based_recommendations(user_id, n=10):
             break
     return results
 
-"""
-ADD THIS FUNCTION to your existing books/collaborative.py (append at the bottom).
-Don't replace the file — just add this one function alongside the others.
-"""
 
 def get_item_cf_scores(book_id):
     """

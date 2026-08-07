@@ -12,4 +12,5 @@ urlpatterns = [
     path('reading-list/ids/',   views.saved_book_ids,        name='saved-book-ids'),
     path('save/<int:book_id>/', views.save_book,             name='save-book'),
     path('unsave/<int:book_id>/', views.unsave_book,         name='unsave-book'),
+    path('rate/<int:book_id>/', views.rate_book,             name='rate-book'),
 ]
