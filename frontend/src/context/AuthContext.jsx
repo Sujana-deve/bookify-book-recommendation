@@ -7,6 +7,7 @@ export function AuthProvider({ children }) {
   const [user, setUser]           = useState(null);
   const [loading, setLoading]     = useState(true);
   const [savedIds, setSavedIds]   = useState(new Set());
+  const [ratings, setRatings]     = useState({}); // { bookId: rating }
 
   const getAccessToken = () => localStorage.getItem('access');
   const getRefreshToken = () => localStorage.getItem('refresh');
@@ -38,12 +39,15 @@ export function AuthProvider({ children }) {
     const token = getAccessToken();
     if (!token) return;
     try {
-      const res = await fetch(`${API}/auth/reading-list/ids/`, {
+      const res = await fetch(`${API}/auth/reading-list/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) return;
-      const ids = await res.json();
-      setSavedIds(new Set(ids.map(Number)));
+      const items = await res.json();
+      setSavedIds(new Set(items.map(i => Number(i.book.id))));
+      const ratingsMap = {};
+      items.forEach(i => { if (i.rating) ratingsMap[i.book.id] = i.rating; });
+      setRatings(ratingsMap);
     } catch { /* ignore */ }
   }, []);
 
@@ -100,6 +104,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('refresh');
     setUser(null);
     setSavedIds(new Set());
+    setRatings({});
   };
 
   const saveBook = async (bookId) => {
@@ -114,7 +119,10 @@ export function AuthProvider({ children }) {
     const res = await fetch(`${API}/auth/unsave/${bookId}/`, {
       method: 'DELETE', headers: authHeaders(),
     });
-    if (res.ok) setSavedIds(prev => { const s = new Set(prev); s.delete(Number(bookId)); return s; });
+    if (res.ok) {
+      setSavedIds(prev => { const s = new Set(prev); s.delete(Number(bookId)); return s; });
+      setRatings(prev => { const r = { ...prev }; delete r[bookId]; return r; });
+    }
     return res.ok;
   };
 
@@ -124,11 +132,20 @@ export function AuthProvider({ children }) {
     return saveBook(bookId);
   };
 
+  const rateBook = async (bookId, rating) => {
+    const res = await fetch(`${API}/auth/rate/${bookId}/`, {
+      method: 'POST', headers: authHeaders(),
+      body: JSON.stringify({ rating }),
+    });
+    if (res.ok) setRatings(prev => ({ ...prev, [bookId]: rating }));
+    return res.ok;
+  };
+
   return (
     <AuthContext.Provider value={{
-      user, loading, savedIds,
+      user, loading, savedIds, ratings,
       login, register, logout,
-      toggleSave, fetchSavedIds,
+      toggleSave, rateBook, fetchSavedIds,
       getAccessToken,
     }}>
       {children}

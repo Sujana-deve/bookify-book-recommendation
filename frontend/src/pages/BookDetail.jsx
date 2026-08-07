@@ -81,17 +81,47 @@ function BookmarkButton({ bookId }) {
   );
 }
 
-function Recommendations({ bookId }) {
+function RatingWidget({ bookId }) {
+  const { user, savedIds, getAccessToken } = useAuth();
+  const [rating, setRating] = useState(0);
+  const [saving, setSaving] = useState(false);
+
+  if (!user || !savedIds.has(Number(bookId))) return null;
+
+  const rate = async (n) => {
+    setSaving(true);
+    const res = await fetch(`${API}/auth/rate/${bookId}/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getAccessToken()}` },
+      body: JSON.stringify({ rating: n }),
+    });
+    if (res.ok) setRating(n);
+    setSaving(false);
+  };
+
+  return (
+    <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginTop: '0.4rem' }}>
+      {[1, 2, 3, 4, 5].map(n => (
+        <span key={n} onClick={() => !saving && rate(n)} style={{
+          cursor: saving ? 'default' : 'pointer', fontSize: '1.3rem',
+          color: n <= rating ? 'var(--terra)' : 'var(--cream-dark)',
+        }}>★</span>
+      ))}
+    </div>
+  );
+}
+
+function Recommendations({ endpoint, title }) {
   const [recs, setRecs] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    fetch(`${API}/books/${bookId}/recommendations/`)
+    fetch(endpoint)
       .then(r => r.json())
       .then(data => { setRecs(data); setLoading(false); })
       .catch(() => setLoading(false));
-  }, [bookId]);
+  }, [endpoint]);
 
   if (loading) return (
     <div style={{ maxWidth: 1000, margin: '0 auto 3rem', padding: '0 2rem' }}>
@@ -110,12 +140,12 @@ function Recommendations({ bookId }) {
     <div style={{ maxWidth: 1000, margin: '0 auto 4rem', padding: '0 2rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.2rem' }}>
         <span style={{ display: 'block', width: 4, height: 22, background: 'var(--terra)', borderRadius: 2, flexShrink: 0 }} />
-        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>You might also like</h2>
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>{title}</h2>
       </div>
       <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.75rem', scrollbarWidth: 'none' }}>
         {recs.map(book => (
           <Link key={book.id} to={`/books/${book.id}`} style={{ textDecoration: 'none', flexShrink: 0 }}>
-            <div style={{ width: 120, transition: 'transform 0.2s', }}>
+            <div style={{ width: 120, transition: 'transform 0.2s' }}>
               <div style={{ width: 120, height: 175, borderRadius: 6, overflow: 'hidden', background: 'var(--parchment)', boxShadow: '3px 5px 14px rgba(44,26,14,0.16)' }}>
                 {book.thumbnail
                   ? <img src={book.thumbnail} alt={book.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
@@ -214,6 +244,7 @@ export default function BookDetail() {
             </div>
             <div style={{ marginTop: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               <BookmarkButton bookId={book.id} />
+              <RatingWidget bookId={book.id} />
               {openLibraryUrl && (
                 <a href={openLibraryUrl} target="_blank" rel="noopener noreferrer" style={{
                   display: 'block', textAlign: 'center', padding: '0.65rem',
@@ -269,7 +300,8 @@ export default function BookDetail() {
       </div>
 
       {/* Recommendations */}
-      <Recommendations bookId={id} />
+      <Recommendations endpoint={`${API}/books/${id}/recommendations/`} title="You might also like" />
+      <Recommendations endpoint={`${API}/books/${id}/recommendations/hybrid/`} title="Readers like you also saved" />
 
       <style>{`
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }

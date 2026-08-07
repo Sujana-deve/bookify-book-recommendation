@@ -31,6 +31,7 @@ export default function MyList() {
   const [items, setItems]       = useState([]);
   const [loading, setLoading]   = useState(true);
   const [removing, setRemoving] = useState(null);
+  const [recs, setRecs]         = useState([]);
 
   useEffect(() => {
     if (!authLoading && !user) { navigate('/login'); return; }
@@ -43,6 +44,14 @@ export default function MyList() {
       .then(data => { setItems(data); setLoading(false); })
       .catch(() => setLoading(false));
   }, [user, authLoading]);
+
+  useEffect(() => {
+    if (!user) return;
+    fetch(`${API}/books/users/${user.id}/recommendations/`)
+      .then(r => r.json())
+      .then(setRecs)
+      .catch(() => {});
+  }, [user]);
 
   const handleRemove = async (bookId) => {
     setRemoving(bookId);
@@ -135,6 +144,25 @@ export default function MyList() {
                 </Link>
               </div>
             ))}
+          </div>
+        )}
+
+        {recs.length > 0 && (
+          <div style={{ marginTop: '3rem' }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', fontWeight: 700, color: 'var(--ink)', marginBottom: '1.2rem' }}>Recommended For You</h2>
+            <div style={{ display: 'flex', gap: '1.4rem', overflowX: 'auto', paddingBottom: '0.75rem' }}>
+              {recs.map(book => (
+                <Link key={book.id} to={`/books/${book.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: 140 }}>
+                  <div style={{ width: 140, aspectRatio: '2/3', borderRadius: 8, overflow: 'hidden', boxShadow: '3px 5px 16px rgba(44,26,14,0.18)', background: 'var(--parchment)' }}>
+                    {book.thumbnail
+                      ? <img src={book.thumbnail} alt={book.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <Nocover title={book.title} />
+                    }
+                  </div>
+                  <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.78rem', fontWeight: 600, color: 'var(--ink)', marginTop: '0.5rem', lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{book.title}</p>
+                </Link>
+              ))}
+            </div>
           </div>
         )}
       </div>
