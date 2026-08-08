@@ -82,20 +82,16 @@ function BookmarkButton({ bookId }) {
 }
 
 function RatingWidget({ bookId }) {
-  const { user, savedIds, getAccessToken } = useAuth();
-  const [rating, setRating] = useState(0);
+  const { user, savedIds, ratings, rateBook } = useAuth();
   const [saving, setSaving] = useState(false);
 
   if (!user || !savedIds.has(Number(bookId))) return null;
 
+  const currentRating = ratings[bookId] || 0;
+
   const rate = async (n) => {
     setSaving(true);
-    const res = await fetch(`${API}/auth/rate/${bookId}/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getAccessToken()}` },
-      body: JSON.stringify({ rating: n }),
-    });
-    if (res.ok) setRating(n);
+    await rateBook(bookId, n);
     setSaving(false);
   };
 
@@ -104,7 +100,7 @@ function RatingWidget({ bookId }) {
       {[1, 2, 3, 4, 5].map(n => (
         <span key={n} onClick={() => !saving && rate(n)} style={{
           cursor: saving ? 'default' : 'pointer', fontSize: '1.3rem',
-          color: n <= rating ? 'var(--terra)' : 'var(--cream-dark)',
+          color: n <= currentRating ? 'var(--terra)' : 'var(--cream-dark)',
         }}>★</span>
       ))}
     </div>
