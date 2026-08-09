@@ -339,7 +339,7 @@ export default function BookList() {
           {/* Left Text / Search Block */}
           <div style={{ flex: '1 1 380px', animation: 'fadeUp 0.65s ease both' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', background: 'rgba(196,96,58,0.1)', borderRadius: 100, padding: '0.3rem 0.9rem', marginBottom: '1.2rem' }}>
-              <span style={{ fontSize: '0.85rem' }}>✨</span>
+              <span style={{ fontSize: '0.85rem' }}></span>
               <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.72rem', fontWeight: 700, color: 'var(--terra)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Smart Book Discovery</span>
             </div>
             <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2.2rem, 4.5vw, 3.4rem)', fontWeight: 700, lineHeight: 1.1, color: 'var(--ink)', marginBottom: '0.9rem' }}>
