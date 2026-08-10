@@ -105,7 +105,7 @@ export default function BookReader() {
   const faces = useMemo(() => {
     if (!data) return [];
     return [
-      { number: '', content: <CoverFace title={data.title} coverUrl={data.cover_url} /> },
+      { number: '', content: <CoverFace title={data.title} coverUrl={data.thumbnail} /> },
       ...pages.map((text, i) => ({ number: i + 1, content: text })),
     ];
   }, [data, pages]);
