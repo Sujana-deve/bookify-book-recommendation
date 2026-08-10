@@ -33,7 +33,7 @@ class BookReaderView(APIView):
             start = text.find("\n", start) + 1
             text = text[start:end if end != -1 else None]
 
-        return Response({"title": book.title, "text": text.strip()})
+        return Response({"title": book.title, "thumbnail": book.thumbnail, "text": text.strip()})
 
 
 @api_view(['GET'])
