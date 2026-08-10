@@ -44,4 +44,4 @@ class ReadingListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ReadingList
-        fields = ('id', 'book', 'saved_at', 'rating')
+        fields = ('id', 'book', 'saved_at', 'rating', 'review_text', 'sentiment')

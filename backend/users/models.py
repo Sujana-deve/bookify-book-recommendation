@@ -14,10 +14,18 @@ class UserProfile(models.Model):
 
 
 class ReadingList(models.Model):
+    SENTIMENT_CHOICES = [
+        ('positive', 'Positive'),
+        ('neutral', 'Neutral'),
+        ('negative', 'Negative'),
+    ]
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reading_list')
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='saved_by')
     saved_at = models.DateTimeField(auto_now_add=True)
     rating = models.PositiveSmallIntegerField(null=True, blank=True)  # 1-5, set after reading
+    review_text = models.TextField(null=True, blank=True)
+    sentiment = models.CharField(max_length=10, choices=SENTIMENT_CHOICES, null=True, blank=True)
 
     class Meta:
         unique_together = ('user', 'book')  # can't save the same book twice
