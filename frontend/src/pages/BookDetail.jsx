@@ -81,13 +81,27 @@ function BookmarkButton({ bookId }) {
   );
 }
 
+const SENTIMENT_STYLE = {
+  positive: { bg: 'rgba(90,140,122,0.12)', color: '#2e6050', label: '🙂 Positive' },
+  neutral:  { bg: 'rgba(158,122,74,0.12)', color: '#6e5030', label: '😐 Neutral' },
+  negative: { bg: 'rgba(181,96,74,0.12)',  color: '#8c3d28', label: '🙁 Negative' },
+};
+
 function RatingWidget({ bookId }) {
-  const { user, savedIds, ratings, rateBook } = useAuth();
+  const { user, savedIds, ratings, reviews, sentiments, rateBook, reviewBook } = useAuth();
   const [saving, setSaving] = useState(false);
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const [reviewDraft, setReviewDraft] = useState('');
+  const [showReviewBox, setShowReviewBox] = useState(false);
+
+  useEffect(() => {
+    setReviewDraft(reviews[bookId] || '');
+  }, [bookId, reviews]);
 
   if (!user || !savedIds.has(Number(bookId))) return null;
 
   const currentRating = ratings[bookId] || 0;
+  const currentSentiment = sentiments[bookId];
 
   const rate = async (n) => {
     setSaving(true);
@@ -95,14 +109,78 @@ function RatingWidget({ bookId }) {
     setSaving(false);
   };
 
+  const submitReview = async () => {
+    if (!reviewDraft.trim()) return;
+    setReviewSaving(true);
+    await reviewBook(bookId, reviewDraft.trim());
+    setReviewSaving(false);
+    setShowReviewBox(false);
+  };
+
   return (
-    <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginTop: '0.4rem' }}>
-      {[1, 2, 3, 4, 5].map(n => (
-        <span key={n} onClick={() => !saving && rate(n)} style={{
-          cursor: saving ? 'default' : 'pointer', fontSize: '1.3rem',
-          color: n <= currentRating ? 'var(--terra)' : 'var(--cream-dark)',
-        }}>★</span>
-      ))}
+    <div style={{ marginTop: '0.4rem' }}>
+      <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+        {[1, 2, 3, 4, 5].map(n => (
+          <span key={n} onClick={() => !saving && rate(n)} style={{
+            cursor: saving ? 'default' : 'pointer', fontSize: '1.3rem',
+            color: n <= currentRating ? 'var(--terra)' : 'var(--cream-dark)',
+          }}>★</span>
+        ))}
+      </div>
+
+      {currentSentiment && (
+        <div style={{
+          marginTop: '0.5rem', textAlign: 'center', fontSize: '0.72rem', fontWeight: 600,
+          padding: '0.3rem 0.6rem', borderRadius: 8,
+          background: SENTIMENT_STYLE[currentSentiment]?.bg,
+          color: SENTIMENT_STYLE[currentSentiment]?.color,
+        }}>
+          {SENTIMENT_STYLE[currentSentiment]?.label}
+        </div>
+      )}
+
+      {!showReviewBox && (
+        <button onClick={() => setShowReviewBox(true)} style={{
+          display: 'block', margin: '0.5rem auto 0', background: 'none', border: 'none',
+          color: 'var(--ink-muted)', fontFamily: 'var(--font-body)', fontSize: '0.75rem',
+          textDecoration: 'underline', cursor: 'pointer',
+        }}>
+          {reviews[bookId] ? 'Edit review' : 'Write a review'}
+        </button>
+      )}
+
+      {showReviewBox && (
+        <div style={{ marginTop: '0.6rem' }}>
+          <textarea
+            value={reviewDraft}
+            onChange={e => setReviewDraft(e.target.value)}
+            placeholder="What did you think of this book?"
+            rows={3}
+            style={{
+              width: '100%', boxSizing: 'border-box', borderRadius: 8,
+              border: '1.5px solid var(--cream-dark)', padding: '0.5rem',
+              fontFamily: 'var(--font-body)', fontSize: '0.82rem', resize: 'vertical',
+            }}
+          />
+          <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem' }}>
+            <button onClick={submitReview} disabled={reviewSaving || !reviewDraft.trim()} style={{
+              flex: 1, background: 'var(--terra)', color: 'white', border: 'none',
+              borderRadius: 8, padding: '0.45rem', fontFamily: 'var(--font-body)',
+              fontSize: '0.78rem', fontWeight: 600,
+              cursor: reviewSaving ? 'not-allowed' : 'pointer',
+            }}>
+              {reviewSaving ? 'Saving…' : 'Submit'}
+            </button>
+            <button onClick={() => setShowReviewBox(false)} style={{
+              background: 'white', color: 'var(--ink-muted)', border: '1.5px solid var(--cream-dark)',
+              borderRadius: 8, padding: '0.45rem 0.8rem', fontFamily: 'var(--font-body)',
+              fontSize: '0.78rem', cursor: 'pointer',
+            }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -297,7 +375,8 @@ export default function BookDetail() {
 
       {/* Recommendations */}
       <Recommendations endpoint={`${API}/books/${id}/recommendations/`} title="You might also like" />
-      <Recommendations endpoint={`${API}/books/${id}/recommendations/hybrid/`} title="Readers like you also saved" />
+      <Recommendations endpoint={`${API}/books/${id}/recommendations/cf/`} title="Readers like you also saved" />
+      <Recommendations endpoint={`${API}/books/${id}/recommendations/hybrid/?alpha=0.5`} title="Recommended for you" />
 
       <style>{`
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }

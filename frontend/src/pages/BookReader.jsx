@@ -3,8 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 
 const API = 'http://localhost:8000/api';
 const CHARS_PER_PAGE = 1300;
-const PAGE_WIDTH = 380;
-const PAGE_HEIGHT = 520;
+const PAGE_WIDTH = 480;
+const PAGE_HEIGHT = 680;
 const FLIP_MS = 500;
 
 // Greedy paragraph-packing: never splits mid-word, keeps paragraphs together
@@ -65,10 +65,18 @@ function PageFace({ children, pageNumber }) {
   );
 }
 
-function CoverFace({ title }) {
+function CoverFace({ title, coverUrl }) {
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-      <span style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📖</span>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '1.2rem' }}>
+      {coverUrl ? (
+        <img
+          src={coverUrl}
+          alt={title}
+          style={{ width: 220, height: 320, objectFit: 'cover', borderRadius: 4, boxShadow: '0 8px 24px rgba(44,26,14,0.3)' }}
+          onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }}
+        />
+      ) : null}
+      <span style={{ fontSize: '2.5rem', display: coverUrl ? 'none' : 'block' }}>📖</span>
       <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--ink)' }}>{title}</h2>
     </div>
   );
@@ -97,7 +105,7 @@ export default function BookReader() {
   const faces = useMemo(() => {
     if (!data) return [];
     return [
-      { number: '', content: <CoverFace title={data.title} /> },
+      { number: '', content: <CoverFace title={data.title} coverUrl={data.cover_url} /> },
       ...pages.map((text, i) => ({ number: i + 1, content: text })),
     ];
   }, [data, pages]);
@@ -153,7 +161,7 @@ export default function BookReader() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)', paddingTop: 88 }}>
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 2rem 3rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '0 2rem 3rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
           <Link to={`/books/${id}`} style={{
             display: 'inline-flex', alignItems: 'center', gap: '0.4rem',

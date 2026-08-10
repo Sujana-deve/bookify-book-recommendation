@@ -8,6 +8,8 @@ export function AuthProvider({ children }) {
   const [loading, setLoading]     = useState(true);
   const [savedIds, setSavedIds]   = useState(new Set());
   const [ratings, setRatings]     = useState({}); // { bookId: rating }
+  const [reviews, setReviews]     = useState({}); // { bookId: review_text }
+  const [sentiments, setSentiments] = useState({}); // { bookId: sentiment }
 
   const getAccessToken = () => localStorage.getItem('access');
   const getRefreshToken = () => localStorage.getItem('refresh');
@@ -46,8 +48,16 @@ export function AuthProvider({ children }) {
       const items = await res.json();
       setSavedIds(new Set(items.map(i => Number(i.book.id))));
       const ratingsMap = {};
-      items.forEach(i => { if (i.rating) ratingsMap[i.book.id] = i.rating; });
+      const reviewsMap = {};
+      const sentimentsMap = {};
+      items.forEach(i => {
+        if (i.rating) ratingsMap[i.book.id] = i.rating;
+        if (i.review_text) reviewsMap[i.book.id] = i.review_text;
+        if (i.sentiment) sentimentsMap[i.book.id] = i.sentiment;
+      });
       setRatings(ratingsMap);
+      setReviews(reviewsMap);
+      setSentiments(sentimentsMap);
     } catch { /* ignore */ }
   }, []);
 
@@ -105,6 +115,8 @@ export function AuthProvider({ children }) {
     setUser(null);
     setSavedIds(new Set());
     setRatings({});
+    setReviews({});
+    setSentiments({});
   };
 
   const saveBook = async (bookId) => {
@@ -122,6 +134,8 @@ export function AuthProvider({ children }) {
     if (res.ok) {
       setSavedIds(prev => { const s = new Set(prev); s.delete(Number(bookId)); return s; });
       setRatings(prev => { const r = { ...prev }; delete r[bookId]; return r; });
+      setReviews(prev => { const r = { ...prev }; delete r[bookId]; return r; });
+      setSentiments(prev => { const r = { ...prev }; delete r[bookId]; return r; });
     }
     return res.ok;
   };
@@ -141,11 +155,24 @@ export function AuthProvider({ children }) {
     return res.ok;
   };
 
+  const reviewBook = async (bookId, reviewText) => {
+    const res = await fetch(`${API}/auth/rate/${bookId}/`, {
+      method: 'POST', headers: authHeaders(),
+      body: JSON.stringify({ review: reviewText }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setReviews(prev => ({ ...prev, [bookId]: reviewText }));
+      if (data.sentiment) setSentiments(prev => ({ ...prev, [bookId]: data.sentiment }));
+    }
+    return res.ok;
+  };
+
   return (
     <AuthContext.Provider value={{
-      user, loading, savedIds, ratings,
+      user, loading, savedIds, ratings, reviews, sentiments,
       login, register, logout,
-      toggleSave, rateBook, fetchSavedIds,
+      toggleSave, rateBook, reviewBook, fetchSavedIds,
       getAccessToken,
     }}>
       {children}
