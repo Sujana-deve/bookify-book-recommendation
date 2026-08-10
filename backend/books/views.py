@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.response import Response
+from django.db.models import F, Avg
 from .models import Book
 from .serializers import BookSerializer
 from books.recommender import get_recommendations
@@ -48,6 +49,18 @@ class BookListView(generics.ListAPIView):
         search = self.request.query_params.get('search', None)
         if search:
             queryset = queryset.filter(title__icontains=search)
+
+        if self.request.query_params.get('sort') == 'top_rated':
+            m = 20
+            c = Book.objects.exclude(average_rating__isnull=True).aggregate(
+                avg=Avg('average_rating'))['avg'] or 3.5
+            queryset = queryset.filter(
+                average_rating__isnull=False, ratings_count__isnull=False
+            ).annotate(
+                wr=(F('ratings_count') / (F('ratings_count') + m)) * F('average_rating')
+                   + (m / (F('ratings_count') + m)) * c
+            ).order_by('-wr')
+
         return queryset
 
 
