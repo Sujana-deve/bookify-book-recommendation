@@ -6,6 +6,7 @@ const CHARS_PER_PAGE = 1300;
 const PAGE_WIDTH = 480;
 const PAGE_HEIGHT = 680;
 const FLIP_MS = 500;
+const BOOKMARK_KEY = (id) => `bookify_bookmark_${id}`;
 
 // Greedy paragraph-packing: never splits mid-word, keeps paragraphs together
 // when they fit, breaks by word only when a single paragraph is too long.
@@ -89,16 +90,34 @@ export default function BookReader() {
   const [index, setIndex] = useState(0);
   const [flip, setFlip] = useState(null); // { dir: 'next' | 'prev', from, to }
   const [animate, setAnimate] = useState(false);
+  const [bookmarkPage, setBookmarkPage] = useState(null);
+  const [showResumePrompt, setShowResumePrompt] = useState(false);
+  const [justBookmarked, setJustBookmarked] = useState(false);
   const timeoutRef = useRef(null);
 
   useEffect(() => {
     setData(null); setError(null); setIndex(0); setFlip(null);
+    setShowResumePrompt(false); setJustBookmarked(false);
     fetch(`${API}/books/${id}/read/`)
       .then(r => r.json())
       .then(json => { if (json.error) setError(json.error); else setData(json); })
       .catch(() => setError('Failed to load book.'));
     return () => clearTimeout(timeoutRef.current);
   }, [id]);
+
+  // Check for an existing bookmark once the book loads. Don't jump automatically —
+  // just surface a prompt so the user decides.
+  useEffect(() => {
+    if (!data) return;
+    const saved = localStorage.getItem(BOOKMARK_KEY(id));
+    if (saved) {
+      const savedIndex = parseInt(saved, 10);
+      if (!isNaN(savedIndex) && savedIndex > 0) {
+        setBookmarkPage(savedIndex);
+        setShowResumePrompt(true);
+      }
+    }
+  }, [data, id]);
 
   const pages = useMemo(() => (data ? paginate(data.text) : []), [data]);
 
@@ -124,6 +143,18 @@ export default function BookReader() {
       setFlip(null);
       setAnimate(false);
     }, FLIP_MS);
+  };
+
+  const jumpToBookmark = () => {
+    setIndex(bookmarkPage);
+    setShowResumePrompt(false);
+  };
+
+  const saveBookmark = () => {
+    localStorage.setItem(BOOKMARK_KEY(id), String(index));
+    setBookmarkPage(index);
+    setJustBookmarked(true);
+    setTimeout(() => setJustBookmarked(false), 1500);
   };
 
   useEffect(() => {
@@ -158,6 +189,7 @@ export default function BookReader() {
   const baseIndex = flip ? flip.to : index;
   const baseFace = faces[baseIndex];
   const flippingFace = flip ? faces[flip.from] : null;
+  const isCurrentPageBookmarked = bookmarkPage === index;
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)', paddingTop: 88 }}>
@@ -170,7 +202,42 @@ export default function BookReader() {
             textDecoration: 'none',
           }}>← Back to Book</Link>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>{data.title}</h1>
+          <button onClick={saveBookmark} title="Bookmark this page" style={{
+            background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem',
+            color: isCurrentPageBookmarked ? 'var(--terra)' : 'var(--ink-muted)',
+            padding: '0.2rem 0.4rem', lineHeight: 1,
+          }}>
+            {isCurrentPageBookmarked ? '🔖' : '🏷️'}
+          </button>
         </div>
+
+        {showResumePrompt && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '1rem',
+            background: 'white', border: '1.5px solid var(--cream-dark)', borderRadius: 10,
+            padding: '0.6rem 1rem',
+          }}>
+            <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.82rem', color: 'var(--ink-mid)' }}>
+              📑 You have a bookmark at page {bookmarkPage}
+            </span>
+            <button onClick={jumpToBookmark} style={{
+              background: 'var(--terra)', color: 'white', border: 'none', borderRadius: 8,
+              padding: '0.35rem 0.9rem', fontFamily: 'var(--font-body)', fontSize: '0.78rem',
+              fontWeight: 600, cursor: 'pointer',
+            }}>Resume</button>
+            <button onClick={() => setShowResumePrompt(false)} style={{
+              background: 'none', border: 'none', color: 'var(--ink-muted)',
+              fontFamily: 'var(--font-body)', fontSize: '0.78rem', cursor: 'pointer',
+              textDecoration: 'underline',
+            }}>Dismiss</button>
+          </div>
+        )}
+
+        {justBookmarked && (
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.78rem', color: 'var(--terra)', marginBottom: '0.6rem' }}>
+            Bookmarked page {index}
+          </p>
+        )}
 
         <div style={{ padding: '1.5rem', background: 'var(--cream-dark)', borderRadius: 12, boxShadow: '0 12px 40px rgba(44,26,14,0.15)' }}>
           <div style={{ position: 'relative', width: PAGE_WIDTH, height: PAGE_HEIGHT, perspective: 1800 }}>
