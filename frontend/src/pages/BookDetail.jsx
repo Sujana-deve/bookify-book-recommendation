@@ -87,7 +87,7 @@ const SENTIMENT_STYLE = {
   negative: { bg: 'rgba(181,96,74,0.12)',  color: '#8c3d28', label: '🙁 Negative' },
 };
 
-function RatingWidget({ bookId }) {
+function RatingWidget({ bookId, onReviewPosted }) {
   const { user, savedIds, ratings, reviews, sentiments, rateBook, reviewBook } = useAuth();
   const [saving, setSaving] = useState(false);
   const [reviewSaving, setReviewSaving] = useState(false);
@@ -115,6 +115,7 @@ function RatingWidget({ bookId }) {
     await reviewBook(bookId, reviewDraft.trim());
     setReviewSaving(false);
     setShowReviewBox(false);
+    if (onReviewPosted) onReviewPosted();
   };
 
   return (
@@ -236,12 +237,71 @@ function Recommendations({ endpoint, title }) {
   );
 }
 
+function ReviewsList({ bookId }) {
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`${API}/books/${bookId}/reviews/`)
+      .then(r => r.json())
+      .then(data => { setReviews(data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [bookId]);
+
+  if (loading || reviews.length === 0) return null;
+
+  return (
+    <div style={{ maxWidth: 1000, margin: '0 auto 4rem', padding: '0 2rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.2rem' }}>
+        <span style={{ display: 'block', width: 4, height: 22, background: 'var(--terra)', borderRadius: 2, flexShrink: 0 }} />
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>
+          Reader Reviews ({reviews.length})
+        </h2>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {reviews.map((r, i) => (
+          <div key={i} style={{
+            background: 'white', borderRadius: 14, padding: '1.2rem 1.4rem',
+            boxShadow: '0 2px 12px rgba(44,26,14,0.06)', border: '1px solid var(--cream-dark)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '0.9rem', color: 'var(--ink)' }}>
+                {r.username}
+              </span>
+              {r.rating && (
+                <span style={{ fontSize: '0.85rem', color: 'var(--terra)' }}>
+                  {'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}
+                </span>
+              )}
+            </div>
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--ink-mid)', margin: 0 }}>
+              {r.review_text}
+            </p>
+            {r.sentiment && (
+              <span style={{
+                display: 'inline-block', marginTop: '0.6rem', fontSize: '0.7rem', fontWeight: 600,
+                padding: '0.25rem 0.6rem', borderRadius: 8,
+                background: SENTIMENT_STYLE[r.sentiment]?.bg,
+                color: SENTIMENT_STYLE[r.sentiment]?.color,
+              }}>
+                {SENTIMENT_STYLE[r.sentiment]?.label}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function BookDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [reviewRefresh, setReviewRefresh] = useState(0);
 
   useEffect(() => {
     setLoading(true);
@@ -318,7 +378,7 @@ export default function BookDetail() {
             </div>
             <div style={{ marginTop: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               <BookmarkButton bookId={book.id} />
-              <RatingWidget bookId={book.id} />
+              <RatingWidget bookId={book.id} onReviewPosted={() => setReviewRefresh(v => v + 1)} />
               {openLibraryUrl && (
                 <a href={openLibraryUrl} target="_blank" rel="noopener noreferrer" style={{
                   display: 'block', textAlign: 'center', padding: '0.65rem',
@@ -377,6 +437,7 @@ export default function BookDetail() {
       <Recommendations endpoint={`${API}/books/${id}/recommendations/`} title="You might also like" />
       <Recommendations endpoint={`${API}/books/${id}/recommendations/cf/`} title="Readers like you also saved" />
       <Recommendations endpoint={`${API}/books/${id}/recommendations/hybrid/?alpha=0.5`} title="Recommended for you" />
+      <ReviewsList bookId={id} key={reviewRefresh} />
 
       <style>{`
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
