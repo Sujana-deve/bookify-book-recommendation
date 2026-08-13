@@ -116,3 +116,32 @@ def hybrid_recommendations(request, book_id):
     alpha = float(request.query_params.get('alpha', 0.5))
     rec_ids = get_hybrid_recommendations(book_id, n=10, alpha=alpha)
     return Response(_serialize_ordered(rec_ids))
+
+from django.contrib.auth.models import User
+
+@api_view(['GET'])
+def book_reviews(request, book_id):
+    """
+    Public reviews for a book — any user with a non-empty review_text.
+    Read-only, no auth required, doesn't touch recommendation logic.
+    """
+    from users.models import ReadingList
+
+    entries = ReadingList.objects.filter(
+        book_id=book_id
+    ).exclude(
+        review_text__isnull=True
+    ).exclude(
+        review_text__exact=''
+    ).select_related('user').order_by('-saved_at')
+
+    data = [
+        {
+            'username': e.user.username,
+            'rating': e.rating,
+            'review_text': e.review_text,
+            'sentiment': e.sentiment,
+        }
+        for e in entries
+    ]
+    return Response(data)
