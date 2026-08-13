@@ -10,4 +10,5 @@ urlpatterns = [
     path('<int:book_id>/recommendations/hybrid/', views.hybrid_recommendations, name='hybrid-recommendations'),
     path('users/<int:user_id>/recommendations/', views.user_based_recommendations, name='cf-user-recommendations'),
     path('<int:pk>/read/', views.BookReaderView.as_view()),
+    path('<int:book_id>/reviews/', views.book_reviews, name='book-reviews'),
 ]
